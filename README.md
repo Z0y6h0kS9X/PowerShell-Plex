@@ -18,12 +18,12 @@ Using powershell navigate to the directory containing the file and run it .\Sort
 
 ## Variables
 Required - Variable Name  - Type         - Description
---------------------------------------------
-Yes      - Credential     - PSCredential - A credential object, easily generating by running 'Get-Credential' and supplying your credentials. 
-Yes      - plexServerName - string       - The name of the Plex server (myPlexServer, etc.).
-Yes      - serverHostName - string       - IP or HostName of the computer where Plex Media Server is installed.
-Yes      - serverProtocol - string       - What protocol (http or https) that you connect to your server on.
-Yes      - serverPort     - int          - Port Number that Plex is listening on (default 32400)
-No       - userName       - string       - Username of the user you want to sort playlists for
-No       - playList       - string       - Title of the playlist you want to sort
+------------------------------------------------------
+1. Yes      - Credential     - PSCredential - A credential object, easily generating by running 'Get-Credential' and supplying your credentials. 
+2. Yes      - plexServerName - string       - The name of the Plex server (myPlexServer, etc.).
+3. Yes      - serverHostName - string       - IP or HostName of the computer where Plex Media Server is installed.
+4. Yes      - serverProtocol - string       - What protocol (http or https) that you connect to your server on.
+5. Yes      - serverPort     - int          - Port Number that Plex is listening on (default 32400)
+6. No       - userName       - string       - Username of the user you want to sort playlists for
+6. No       - playList       - string       - Title of the playlist you want to sort
 
