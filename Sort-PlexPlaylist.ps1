@@ -74,6 +74,8 @@ FUNCTION Get-PlexUsers
 		$plexConfig
 	)
 
+	Write-Host "Gathering user(s)..." -ForegroundColor Yellow
+
 	$users = New-Object System.Collections.ArrayList
 
 	#Gets raw user info
@@ -84,6 +86,17 @@ FUNCTION Get-PlexUsers
 	{
 		[void]$users.Add( $user )
 	}
+
+	#Adds Server Owner info
+	[void]$users.Add( (
+		New-Object psobject -Property ( [ordered]@{
+			id        = 1;
+			email     = 'Server Owner';
+			username  = $plexConfig.UserName;
+			machineID = $users[0].machineID;
+			token     = $plexConfig.token; 
+		} )
+	) )
 
 	#Gets the user tokens for the users
 
@@ -99,6 +112,7 @@ FUNCTION Get-PlexUsers
 			$user.token = $token
 
 		}
+
 
 	return $users
 	 
@@ -119,12 +133,31 @@ FUNCTION Get-Choice
 	Write-Host "===================================="
 
 	$i = 0
-	for ( $i = 0; $i -lt $list.Count; $i++ )
+
+	if ( ( ($list | Get-Member -MemberType Properties).Count ) -gt 1 ) #array has multiple columsn specified
+	{
+		for ( $i = 0; $i -lt $list.Count; $i++ )
+		{
+
+			#In case multiple items are passed in, it will separate them with a | character
+			$output = ( ($list | Get-Member -MemberType Properties).Name | ForEach-Object { $list[$i].$_ } ) -join ' | '
+			
+			Write-Host "[$($i)]: $($output)"
+
+		}
+	}
+	else #array only has 1 element per entry
 	{
 
-		Write-Host "[$($i)]: $($list[$i])"
+		for ( $i = 0; $i -lt $list.Count; $i++ )
+		{
+			
+			Write-Host "[$($i)]: $($list[$i])"
+
+		}
 
 	}
+	
 
 	do {
 
@@ -137,7 +170,7 @@ FUNCTION Get-Choice
 		$response = -1
 	}
 	
-return $response
+	return $response
 
 }
 
@@ -151,6 +184,8 @@ FUNCTION Get-Playlist
 		[psobject]
 		$plexConfig
 	)
+
+	Write-Host "Gathering playlist(s)..." -ForegroundColor Yellow
 
 	#Gets the data from the site and converts it into a usable object
 	$Data = Invoke-WebRequest -Uri "$($plexConfig.Protocol)://$($plexConfig.HostName):$($plexConfig.Port)/playlists/?X-Plex-Token=$($user.Token)"
@@ -266,27 +301,52 @@ $PlexConfigData | Add-Member -MemberType NoteProperty -Name HostName   -Value $s
 $PlexConfigData | Add-Member -MemberType NoteProperty -Name ServerName -Value $plexServerName
 $PlexConfigData | Add-Member -MemberType NoteProperty -Name Port       -Value $serverPort
 
-Write-Host "Config Generated - gathering users" -ForegroundColor Yellow
-
 $users = Get-PlexUsers -plexConfig $PlexConfigData 
 
 #if no username is specified initially, or it is specified but there is no match, prompts for selection
 if ( !$userName -or !( $users | Where-Object { $_.username -match $userName } ) )
 { 
-	$choice = Get-Choice -Title "Select the user you want to list playlists for" -list $users.email
-}
+	$choice = Get-Choice -Title "Select the user you want to list playlists for" -list ( $users | Select-Object -Property email,username )
+	#Gets the information for the user selected
+	$user = $users[$choice]
 
-#Gets the information for the user selected
-$user = $users[$choice]
+	if ( $choice -eq -1 )
+	{
+		Write-Host "No User Selected, Exiting Script"
+		BREAK
+	}
+
+}
+else #if username was specified, sets the object here
+{
+	$user = $users | Where-Object { $_.username -match $userName }
+}
 
 #Gets the playlists for the user selected
 $playLists = Get-Playlist -user $user -plexConfig $PlexConfigData
 
-#Gets the playlist choice
-$choice = Get-Choice -Title "Select the playlist you want to sort" -list $playLists.title
+if ( !$playList -or !( $playLists | Where-Object { $_.title -match $playList } )  )
+{
+
+	#Gets the playlist choice
+	$choice = Get-Choice -Title "Select the playlist you want to sort" -list $playLists.title
+
+	if ( $choice -eq -1 )
+	{
+		Write-Host "No Playlist Selected, Exiting Script"
+		BREAK
+	}
+
+	$playlistChoice = $playLists[$choice]	
+
+}
+else 
+{
+	$playlistChoice = $playLists | Where-Object { $_.title -match $playList }
+}
 
 #Sorts the list of tracks (ratingkeys)
-$playLists[$choice].Tracks = $playLists[$choice].Tracks | Sort-Object -Property title
+$playlistChoice.Tracks = $playlistChoice.Tracks | Sort-Object -Property title
 
 Add-Playlist -user $user -plexConfig $PlexConfigData -playlistTitle "$($playLists[$choice].title) - Sorted" -tracks ( ($playLists[$choice].Tracks).ratingKey )
 
